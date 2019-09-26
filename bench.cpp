@@ -176,6 +176,31 @@ static void BM_reserve_insert(benchmark::State& state) {
     }
 }
 
+static void BM_insert(benchmark::State& state) {
+    const int count = state.range(0);
+    pcl::PointCloud<pcl::PointXYZRGB> cld;
+    pcl::PointXYZRGB pt;
+
+    pt.x = pt.y = pt.z = 1;
+    pt.r = pt.g = pt.b = 128;
+
+    pcl::PointCloud<pcl::PointXYZRGB> single;
+    single.width = count; single.height = 1;
+    single.is_dense = false;
+    for (int i = 0; i < count; ++i)
+    single.points.push_back(pt);
+    for (auto _: state) {
+        cld.header.stamp = std::max(cld.header.stamp, single.header.stamp);
+
+        std::size_t nr_points = cld.size();
+        cld.points.insert(cld.points.end(), single.points.begin(), single.points.end());
+        cld.width = static_cast<uint32_t>(cld.points.size());
+        cld.height = 1;
+        cld.is_dense &= single.is_dense;
+        benchmark::DoNotOptimize(cld);
+    }
+}
+
 BENCHMARK(BM_emplace)->RangeMultiplier(10)->Range(1, 10000);
 BENCHMARK(BM_old)->RangeMultiplier(10)->Range(1, 10000);
 BENCHMARK(BM_concat)->RangeMultiplier(10)->Range(1, 10000);
@@ -183,5 +208,6 @@ BENCHMARK(BM_resize_raw)->RangeMultiplier(10)->Range(1, 10000);
 BENCHMARK(BM_resize_copy)->RangeMultiplier(10)->Range(1, 10000);
 BENCHMARK(BM_reserve_raw)->RangeMultiplier(10)->Range(1, 10000);
 BENCHMARK(BM_reserve_insert)->RangeMultiplier(10)->Range(1, 10000);
+BENCHMARK(BM_insert)->RangeMultiplier(10)->Range(1, 10000);
 
 BENCHMARK_MAIN();
